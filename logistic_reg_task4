@@ -1,0 +1,97 @@
+# Logistic Regression Binary Classification - Breast Cancer Dataset
+# Task 4: Classification with Logistic Regression
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    confusion_matrix, classification_report,
+    roc_auc_score, roc_curve, precision_score, recall_score
+)
+
+# 1. Load dataset
+df = pd.read_csv('data.csv')
+
+# Drop 'id' column if present
+if 'id' in df.columns:
+    df = df.drop('id', axis=1)
+
+# Remove any columns with all NaNs (sometimes trailing commas cause this)
+df = df.dropna(axis=1, how='all')
+
+# Check for missing values and drop rows with any
+df = df.dropna()
+
+# Encode target: 'M' = 1, 'B' = 0
+df['diagnosis'] = df['diagnosis'].map({'M': 1, 'B': 0})
+
+# 2. Features and target
+X = df.drop('diagnosis', axis=1)
+y = df['diagnosis']
+
+# 3. Train/Test Split and Standardization
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 4. Fit Logistic Regression Model
+clf = LogisticRegression(max_iter=1000, solver='liblinear', random_state=42)
+clf.fit(X_train_scaled, y_train)
+
+# 5. Evaluation
+y_pred = clf.predict(X_test_scaled)
+y_proba = clf.predict_proba(X_test_scaled)[:, 1]
+
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)
+print('Confusion Matrix:\n', cm)
+
+# Classification Report
+print('Classification Report:\n', classification_report(y_test, y_pred))
+
+# Precision and Recall
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+print(f'Precision: {precision:.3f}, Recall: {recall:.3f}')
+
+# ROC Curve and AUC
+fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+roc_auc = roc_auc_score(y_test, y_proba)
+print(f'ROC-AUC: {roc_auc:.3f}')
+
+plt.figure(figsize=(6, 4))
+plt.plot(fpr, tpr, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], 'k--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend()
+plt.show()
+
+# 6. Threshold Tuning Example
+custom_threshold = 0.3
+y_pred_custom = (y_proba > custom_threshold).astype(int)
+cm_custom = confusion_matrix(y_test, y_pred_custom)
+print(f'Confusion Matrix (threshold={custom_threshold}):\n', cm_custom)
+
+# 7. Sigmoid Function Visualization
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+z = np.linspace(-10, 10, 200)
+plt.figure(figsize=(6, 4))
+plt.plot(z, sigmoid(z))
+plt.title('Sigmoid Function')
+plt.xlabel('z')
+plt.ylabel('Sigmoid(z)')
+plt.grid(True)
+plt.show()
